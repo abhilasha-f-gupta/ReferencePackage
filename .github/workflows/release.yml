@@ -1,0 +1,40 @@
+name: Auto-Release ReferenceAppPackage
+
+# Run this workflow whenever code is pushed to main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Configure Git so it can push tags
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Step 3: Determine next version tag
+      - name: Get next version
+        id: version
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 || echo "0.0.0")
+          echo "Last tag: $LAST_TAG"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
+          PATCH=$((PATCH + 1))
+          NEW_TAG="$MAJOR.$MINOR.$PATCH"
+          echo "New tag: $NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      # Step 4: Create and push the tag
+      - name: Create Git tag
+        run: |
+          git tag ${{ steps.version.outputs.new_tag }}
+          git push origin ${{ steps.version.outputs.new_tag }}
