@@ -1,0 +1,48 @@
+name: Release ReferenceAppPackage
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Read VERSION file
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "new_tag=$VERSION" >> $GITHUB_OUTPUT
+
+      # Check if tag exists
+      - name: Check tag
+        run: |
+          if git rev-parse "refs/tags/${{ steps.version.outputs.new_tag }}" >/dev/null 2>&1; then
+            echo "Tag already exists. Skipping."
+            exit 0
+          fi
+
+      # Create and push tag
+      - name: Create tag
+        run: |
+          git tag ${{ steps.version.outputs.new_tag }}
+          git push origin ${{ steps.version.outputs.new_tag }}
+
+      # Trigger MainApp workflow
+      - name: Trigger MainApp Workflow
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: abhilasha-f-gupta/MainApp
+          event-type: reference-package-released
+          client-payload: '{"version":"${{ steps.version.outputs.new_tag }}"}'
