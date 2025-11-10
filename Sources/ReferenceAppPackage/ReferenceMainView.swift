@@ -13,7 +13,7 @@ public struct ReferenceMainView: View {
     public var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "star.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 50))
                 .foregroundColor(.yellow)
             
             Text("Hello This is coming from Reference Framework! Welcome to the demo")
