@@ -1,6 +1,5 @@
 name: Auto-Release ReferenceAppPackage
 
-# Run this workflow whenever code is pushed to main
 on:
   push:
     branches:
@@ -11,30 +10,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
-      - name: Checkout code
+      # 1️⃣ Checkout ReferenceAppPackage
+      - name: Checkout ReferenceAppPackage
         uses: actions/checkout@v3
 
-      # Step 2: Configure Git so it can push tags
+      # 2️⃣ Configure Git
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Step 3: Determine next version tag
-      - name: Get next version
+      # 3️⃣ Read version from VERSION file
+      - name: Read version
         id: version
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 || echo "0.0.0")
-          echo "Last tag: $LAST_TAG"
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_TAG"
-          PATCH=$((PATCH + 1))
-          NEW_TAG="$MAJOR.$MINOR.$PATCH"
-          echo "New tag: $NEW_TAG"
-          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          VERSION=$(cat VERSION)
+          echo "Version from file: $VERSION"
+          echo "new_tag=$VERSION" >> $GITHUB_OUTPUT
 
-      # Step 4: Create and push the tag
-      - name: Create Git tag
+      # 4️⃣ Check if tag already exists
+      - name: Check if version is already tagged
+        run: |
+          if git rev-parse "refs/tags/${{ steps.version.outputs.new_tag }}" >/dev/null 2>&1; then
+            echo "Version ${{ steps.version.outputs.new_tag }} already tagged. Skipping workflow."
+            exit 0
+          fi
+
+      # 5️⃣ Create and push the tag
+      - name: Create and push tag
         run: |
           git tag ${{ steps.version.outputs.new_tag }}
           git push origin ${{ steps.version.outputs.new_tag }}
+
+      # 6️⃣ Checkout MainApp
+      - name: Checkout MainApp
+        uses: actions/checkout@v3
+        with:
+          repository: your-username/MainApp
+          token: ${{ secrets.PAT_TOKEN }}
+          path: MainApp
+
+      # 7️⃣ Update ReferenceAppPackage version in MainApp
+      - name: Update ReferenceAppPackage in MainApp
+        run: |
+          cd MainApp
+          # Replace the URL@tag in Package.swift with the new tag
+          sed -i '' "s#https://github.com/your-username/ReferenceAppPackage.git@.*#https://github.com/your-username/ReferenceAppPackage.git@${{ steps.version.outputs.new_tag }}#g" Package.swift
+          git checkout -b update-package-to-${{ steps.version.outputs.new_tag }}
+          git add Package.swift
+          git commit -m "Update ReferenceAppPackage to ${{ steps.version.outputs.new_tag }}"
+          git push origin update-package-to-${{ steps.version.outputs.new_tag }}
+
+      # 8️⃣ Create PR in MainApp
+      - name: Create PR in MainApp
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: your-username/MainApp
+          branch: update-package-to-${{ steps.version.outputs.new_tag }}
+          base: main
+          title: "Update ReferenceAppPackage to ${{ steps.version.outputs.new_tag }}"
+          body: "This PR updates ReferenceAppPackage to version ${{ steps.version.outputs.new_tag }}."
