@@ -33,10 +33,11 @@ jobs:
           fi
 
       # Create and push tag
-      - name: Create tag
+      - name: Create and push tag
         run: |
           git tag ${{ steps.version.outputs.new_tag }}
-          git push origin ${{ steps.version.outputs.new_tag }}
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/abhilasha-f-gupta/ReferencePackage.git ${{ steps.version.outputs.new_tag }}
+
 
       # Trigger MainApp workflow
       - name: Trigger MainApp Workflow
