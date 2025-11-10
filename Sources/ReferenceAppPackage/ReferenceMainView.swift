@@ -16,7 +16,7 @@ public struct ReferenceMainView: View {
                 .font(.system(size: 48))
                 .foregroundColor(.yellow)
             
-            Text("Hello from Reference Framework!")
+            Text("Hello This is coming from Reference Framework! Welcome to the demo")
                 .font(.headline)
                 .foregroundColor(.primary)
             
